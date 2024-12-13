@@ -1,6 +1,0 @@
-tensorflow
-numpy
-flask
-beautifulsoup4
-requests
-google-api-python-client
