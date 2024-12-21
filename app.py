@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request
+from flask import Flask, render_template, request, redirect, url_for, session
 from googlesearch import search
 import tensorflow as tf
 from tensorflow.keras.models import load_model
@@ -11,6 +11,7 @@ import language_tool_python  # Import language tool for grammar correction
 
 # Initialize Flask app
 app = Flask(__name__)
+app.secret_key = 'your_secret_key'  # Required for session management
 
 # Load the trained model and tokenizer
 def load_model_and_tokenizer():
@@ -55,23 +56,6 @@ def google_search(query, num_results=5):
         print(f"Error during Google search: {e}")
         return []
 
-# Scrape website content
-def scrape_website(url):
-    """
-    Scrapes text content from the given URL.
-    """
-    try:
-        response = requests.get(url, timeout=5)
-        if response.status_code != 200:
-            print(f"Failed to fetch {url}")
-            return None
-        soup = BeautifulSoup(response.text, 'html.parser')
-        content = " ".join([p.text for p in soup.find_all('p')])
-        return preprocess_text(content)
-    except Exception as e:
-        print(f"Error scraping {url}: {e}")
-        return None
-
 # Predict function
 def predict_label(model, tokenizer, claim):
     """
@@ -101,13 +85,8 @@ def index():
         if not urls:
             return render_template("index.html", error="No search results found.")
 
-        # Scrape evidence from URLs (optional; you could skip this part)
-        # This scraped content is not used directly for predictions
-        scraped_data = []
-        for url in urls:
-            evidence = scrape_website(url)
-            if evidence:
-                scraped_data.append(evidence)
+        # Save the URLs to the session for access on the sources page
+        session['urls'] = urls
 
         # Predict label and confidence using the corrected claim
         label, confidence = predict_label(model, tokenizer, corrected_query)
@@ -122,6 +101,12 @@ def index():
         )
 
     return render_template("index.html")
+
+@app.route("/sources")
+def sources():
+    # Retrieve URLs from the session
+    urls = session.get('urls', [])
+    return render_template("sources.html", urls=urls)
 
 # Run the Flask app
 if __name__ == "__main__":
