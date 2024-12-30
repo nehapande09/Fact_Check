@@ -1,6 +1,9 @@
-Flask
-tensorflow
-beautifulsoup4
-google
-numpy
-requests
+Flask==2.3.2
+google==3.0.0
+tensorflow==2.10.0
+pillow==9.2.0
+pytesseract==0.3.10
+beautifulsoup4==4.12.2
+requests==2.31.0
+language-tool-python==2.7.1
+keras==3.7.0

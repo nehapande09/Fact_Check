@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, redirect, url_for, session
+from flask import Flask, render_template, request, session
 from googlesearch import search
 import tensorflow as tf
 from tensorflow.keras.models import load_model
@@ -14,6 +14,9 @@ import pytesseract  # OCR library
 # Initialize Flask app
 app = Flask(__name__)
 app.secret_key = 'your_secret_key'
+
+NEWS_API_KEY = "737ac3568c22431da65c1c36332a8650"
+NEWS_API_URL = "https://newsapi.org/v2/everything"
 
 # Load the trained model and tokenizer
 def load_model_and_tokenizer():
@@ -33,13 +36,13 @@ def preprocess_text(text):
 
 # Grammar correction function
 def correct_grammar(text):
-    tool = language_tool_python.LanguageTool('en-US')
+    tool = language_tool_python.LanguageTool('en-IN')
     matches = tool.check(text)
     corrected_text = language_tool_python.utils.correct(text, matches)
     return corrected_text
 
 # Google search function
-def google_search(query, num_results=5):
+def google_search(query, num_results=10):
     try:
         urls = []
         for url in search(query, num=num_results, stop=num_results, pause=2):
@@ -48,6 +51,37 @@ def google_search(query, num_results=5):
     except Exception as e:
         print(f"Error during Google search: {e}")
         return []
+
+# Fetch news articles using News API
+def fetch_news_articles(query, num_results=5):
+    try:
+        params = {
+            "q": query,
+            "apiKey": NEWS_API_KEY,
+            "pageSize": num_results
+        }
+        response = requests.get(NEWS_API_URL, params=params)
+        if response.status_code == 200:
+            data = response.json()
+            articles = data.get("articles", [])
+            urls = [article["url"] for article in articles if "url" in article]
+            return urls
+        else:
+            print(f"News API error: {response.status_code} - {response.text}")
+            return []
+    except Exception as e:
+        print(f"Error fetching news articles: {e}")
+        return []
+
+# Generate the converse of a claim
+def generate_converse(claim):
+    if "not" in claim:
+        converse = claim.replace("not", "")
+    else:
+        words = claim.split()
+        words.insert(1, "not")
+        converse = " ".join(words)
+    return converse.strip()
 
 # Predict function
 def predict_label(model, tokenizer, claim):
@@ -61,11 +95,8 @@ def predict_label(model, tokenizer, claim):
 
 # Preprocessing image before OCR
 def preprocess_image(image):
-    # Convert to grayscale
     image = image.convert("L")
-    # Enhance sharpness
     image = ImageEnhance.Sharpness(image).enhance(2)
-    # Apply thresholding
     image = image.point(lambda x: 0 if x < 140 else 255)
     return image
 
@@ -74,7 +105,6 @@ def extract_text_from_image(image_file):
     try:
         image = Image.open(image_file)
         processed_image = preprocess_image(image)
-        # Use Tesseract with language support for Hindi, English, and Marathi
         custom_config = r'--oem 3 --psm 6'
         text = pytesseract.image_to_string(processed_image, lang='eng+hin+mar', config=custom_config)
         return text.strip()
@@ -84,51 +114,82 @@ def extract_text_from_image(image_file):
 
 @app.route("/", methods=["GET", "POST"])
 def index():
+    truth_percentage = None
+    false_percentage = None
+    error = None
+    urls = []
+    query = None
+    corrected_query = None
+    label = None
+    confidence = None
+    converse_query = None
+    converse_label = None
+    converse_confidence = None
+
     if request.method == "POST":
-        # Check if an image is uploaded
+        input_type = request.form.get("input_type")  # 'news' or 'other'
         image = request.files.get("image")
         user_query = request.form.get("query")
 
         if image and not user_query:
-            # Extract text from the uploaded image
             try:
                 user_query = extract_text_from_image(image)
-                print("Extracted text:", user_query)  # Debugging log
+                print("Extracted text:", user_query)
             except Exception as e:
                 print(f"Error extracting text from image: {e}")
-                return render_template("index.html", error="Failed to process the uploaded image.")
+                error = "Failed to process the uploaded image."
+                return render_template("index.html", error=error)
 
         if not user_query:
-            return render_template("index.html", error="Please enter a claim or upload an image.")
+            error = "Please enter a claim or upload an image."
+            return render_template("index.html", error=error)
 
-        # Correct grammar of the user's input
         corrected_query = correct_grammar(user_query)
+        converse_query = generate_converse(corrected_query)
 
-        # Perform Google search
-        urls = google_search(corrected_query, num_results=5)
+        if input_type == "news":
+            urls = fetch_news_articles(corrected_query, num_results=5)
+            if not urls:  # Fallback to Google search
+                urls = google_search(corrected_query, num_results=5)
+        else:
+            urls = google_search(corrected_query, num_results=5)
+
         if not urls:
-            return render_template("index.html", error="No search results found.")
+            error = "No search results found."
+            return render_template("index.html", error=error)
 
         session['urls'] = urls
 
-        # Predict label and confidence using the corrected claim
         label, confidence = predict_label(model, tokenizer, corrected_query)
+        converse_label, converse_confidence = predict_label(model, tokenizer, converse_query)
+
+        truth_percentage = round((confidence + (100 - converse_confidence)) / 2, 2)
+        false_percentage = round(100 - truth_percentage, 2)
+
+        is_true = truth_percentage > 50
 
         return render_template(
             "index.html",
             query=user_query,
             corrected_query=corrected_query,
             label=label,
-            confidence=confidence
+            confidence=confidence,
+            converse_query=converse_query,
+            converse_label=converse_label,
+            converse_confidence=converse_confidence,
+            truth_percentage=truth_percentage,
+            false_percentage=false_percentage,
+            is_true=is_true,
+            urls=urls,
+            error=error
         )
 
-    return render_template("index.html")
-
-@app.route("/sources")
-def sources():
-    # Retrieve URLs from the session
-    urls = session.get('urls', [])
-    return render_template("sources.html", urls=urls)
+    return render_template(
+        "index.html",
+        truth_percentage=truth_percentage,
+        false_percentage=false_percentage,
+        error=error
+    )
 
 if __name__ == "__main__":
     app.run(debug=True)

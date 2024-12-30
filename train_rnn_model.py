@@ -7,6 +7,8 @@ from tensorflow.keras.preprocessing.text import Tokenizer
 from tensorflow.keras.preprocessing.sequence import pad_sequences
 import numpy as np
 
+
+
 # Load the dataset
 texts = []
 labels = []
@@ -37,7 +39,7 @@ model = Sequential([
     Dropout(0.5),
     Dense(64, activation='relu'),
     Dropout(0.5),
-    Dense(1, activation='sigmoid')  # Binary classification
+    Dense(1, activation='sigmoid')  #Binary
 ])
 
 # Compile the model
