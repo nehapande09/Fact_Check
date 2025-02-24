@@ -4,73 +4,19 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>VeriFact</title>
+    
     <!-- Bootstrap CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+
     <style>
-        .hero-section {
-            background-color: #f8f9fa;
-            padding: 4rem 0;
-        }
-        .logo {
-            max-height: 50px;
-        }
-        .result-box {
-            margin-top: 2rem;
-            padding: 2rem;
-            border-radius: 10px;
-            background-color: white;
-            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-            text-align: center;
-        }
-        .percentage-circle {
-            width: 150px;
-            height: 150px;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 1.5rem;
-            font-weight: bold;
-            color: white;
-            margin: 1rem auto;
-        }
-        .truth-circle {
-            background-color: #28a745;
-            animation: grow 2s ease-out;
-        }
-        .false-circle {
-            background-color: #dc3545;
-            animation: grow 2s ease-out;
-        }
-        @keyframes grow {
-            0% {
-                transform: scale(0);
-            }
-            100% {
-                transform: scale(1);
-            }
-        }
-        .footer {
-            background-color: #343a40;
-            color: white;
-            padding: 2rem 0;
-            margin-top: 4rem;
-        }
-        .loading-text {
-            display: none;
-            text-align: center;
-            font-size: 1.5rem;
-            color: #007bff;
-        }
-        .sources-section {
-            display: none;
-            margin-top: 2rem;
-            padding: 2rem;
-            background-color: #f1f1f1;
-            border-radius: 10px;
-            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-        }
+        .hero-section { background-color: #f8f9fa; padding: 4rem 0; }
+        .logo { max-height: 50px; }
+        .result-box { margin-top: 2rem; padding: 2rem; border-radius: 10px; background-color: white; box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1); text-align: center; }
+        .footer { background-color: #343a40; color: white; padding: 2rem 0; margin-top: 4rem; }
+        .loading-text { display: none; text-align: center; font-size: 1.5rem; color: #007bff; }
+        .sources-section { display: none; margin-top: 2rem; padding: 2rem; background-color: #f1f1f1; border-radius: 10px; box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1); }
     </style>
+
     <script>
         function showLoading() {
             document.getElementById("loading-text").style.display = "block";
@@ -79,34 +25,21 @@
             document.getElementById("submit-btn").disabled = true;
         }
 
-        function clearFields() {
-            document.querySelector('input[name="query"]').value = '';
-            document.querySelector('input[name="image"]').value = '';
-            document.getElementById("submit-btn").disabled = false;
-            document.getElementById("loading-text").style.display = "none";
-        }
-
         function toggleSources() {
             const sourcesSection = document.getElementById("sources-section");
             sourcesSection.style.display = sourcesSection.style.display === "none" ? "block" : "none";
         }
-
-        window.onload = function () {
-            clearFields();
-        };
     </script>
 </head>
 <body>
-    <!-- Header -->
     <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
         <div class="container">
             <a class="navbar-brand" href="/">
-                <img src="static/VeriFact.png" alt="VeriFactLogo" class="logo">
+                <img src="static/VeriFact.png" alt="VeriFact Logo" class="logo">
             </a>
         </div>
     </nav>
 
-    <!-- Hero Section -->
     <section class="hero-section">
         <div class="container">
             <div class="text-center mb-5">
@@ -114,35 +47,17 @@
                 <p class="lead">Where Facts Meet Verification</p>
             </div>
 
-            <!-- Input Form -->
             <form method="POST" action="/" enctype="multipart/form-data" onsubmit="showLoading();">
                 <div class="input-group mb-3">
                     <input type="text" name="query" class="form-control form-control-lg" placeholder="Enter your claim to verify..." value="{{ query if query else '' }}">
                 </div>
-                <div class="mb-3">
-                    <label for="image" class="form-label">Or upload an image:</label>
-                    <input type="file" name="image" id="image" class="form-control" accept="image/*">
-                </div>
-                <div class="mb-3">
-                    <label for="fact-type" class="form-label">Select Fact Type:</label>
-                    <select name="input_type" id="fact-type" class="form-select">
-                        <option value="news" {% if input_type == "news" %}selected{% endif %}>News</option>
-                        <option value="current" {% if input_type == "current" %}selected{% endif %}>Current</option>
-                        <option value="history" {% if input_type == "history" %}selected{% endif %}>History</option>
-                        <option value="other" {% if input_type == "other" %}selected{% endif %}>Other</option>
-                    </select>
-                </div>
                 <button id="submit-btn" class="btn btn-primary btn-lg" type="submit">Verify</button>
             </form>
 
-            <!-- Loading Text -->
-            <div id="loading-text" class="loading-text">
-                Processing your claim... Please wait.
-            </div>
+            <div id="loading-text" class="loading-text">Processing your claim... Please wait.</div>
 
-            <!-- Results Section -->
-            <div id="results-container" style="display: {% if truth_percentage is not none %}block{% else %}none{% endif %};">
-                {% if query %}
+            {% if query %}
+            <div id="results-container">
                 <div class="mt-5">
                     <strong>Entered Claim:</strong>
                     <p class="lead">{{ query }}</p>
@@ -151,59 +66,58 @@
                     <strong>Grammar Corrected Claim:</strong>
                     <p class="lead">{{ corrected_query }}</p>
                 </div>
-                {% endif %}
-
+            
                 {% if truth_percentage is not none and false_percentage is not none %}
                 <div class="result-box">
-                    <h3 class="mb-4">Analysis Results</h3>
-                    {% if truth_percentage > false_percentage %}
-                    <div class="percentage-circle truth-circle">
-                        {{ "%.2f"|format(truth_percentage) }}% True
-                    </div>
-                    <div class="percentage-circle false-circle">
-                        {{ "%.2f"|format(false_percentage) }}% False
-                    </div>
-                    {% else %}
-                    <div class="percentage-circle false-circle">
-                        {{ "%.2f"|format(false_percentage) }}% False
-                    </div>
-                    <div class="percentage-circle truth-circle">
-                        {{ "%.2f"|format(truth_percentage) }}% True
-                    </div>
-                    {% endif %}
+                    <h3 class="mb-4">Based on Trending Facts</h3>
+                    <h4 class="{% if truth_percentage > 50 %}text-success{% else %}text-danger{% endif %} mt-4">
+                        {% if truth_percentage > 50 %}
+                            ✅ Likely True ({{ truth_percentage }}% Confidence)
+                        {% else %}
+                            ❌ Likely False ({{ false_percentage }}% Confidence)
+                        {% endif %}
+                    </h4>
                     <div class="mt-4">
                         <button class="btn btn-secondary" onclick="toggleSources()">View Sources</button>
                     </div>
                 </div>
-                {% elif error %}
-                <div class="alert alert-danger mt-4" role="alert">
-                    {{ error }}
+                <div id="sources-section" class="sources-section">
+                    <h4>These are the sources of the trending result:</h4>
+                    <ul>
+                        {% for source in urls %}
+                        <li><a href="{{ source }}" target="_blank">{{ source }}</a></li>
+                        {% endfor %}
+                    </ul>
+                </div>
+                
+                <h3 class="mt-5">Based on Analysis</h3>
+                {{uncertain_percentage}}
+                <p><strong>Reliable:</strong> {{ analysis_result.reliable if analysis_result else 0 }}</p>
+                <p><strong>Uncertain:</strong> {{ analysis_result.uncertain if analysis_result else 0 }}</p>
+                <p><strong>Misleading:</strong> {{ analysis_result.misleading if analysis_result else 0 }}</p>
+
+                <div class="alert alert-info mt-4">
+                    <h5><strong>Final Verdict</strong></h5>
+                    <p><strong>{{ generative_summary if generative_summary else "No summary available." }}</strong></p>
                 </div>
                 {% endif %}
             </div>
+            {% endif %}
 
-            <!-- Sources Section -->
-            <div id="sources-section" class="sources-section">
-                <h4>Sources:</h4>
-                <ul>
-                    {% for source in urls %}
-                    <li><a href="{{ source }}" target="_blank">{{ source }}</a></li>
-                    {% endfor %}
-                </ul>
+            {% if error %}
+            <div class="alert alert-danger mt-4" role="alert">
+                {{ error }}
             </div>
+            {% endif %}
         </div>
     </section>
 
-    <!-- Footer -->
     <footer class="footer">
         <div class="container">
             <div class="text-center">
-                <p>&copy; 2024 VeriFact. All rights reserved.</p>
+                <p>&copy; 2025 VeriFact. All rights reserved.</p>
             </div>
         </div>
     </footer>
-
-    <!-- Bootstrap JS -->
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>
